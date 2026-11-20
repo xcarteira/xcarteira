@@ -1,0 +1,12 @@
+import {useEffect,useState} from 'react';
+import {supabase,supabaseConfigured} from '../lib/supabase';
+
+export default function AuthGate({children}){
+ const [session,setSession]=useState(undefined),[email,setEmail]=useState(''),[senha,setSenha]=useState(''),[modo,setModo]=useState('entrar'),[msg,setMsg]=useState('');
+ useEffect(()=>{if(!supabaseConfigured){setSession(null);return} supabase.auth.getSession().then(({data})=>setSession(data.session)); const {data:s}=supabase.auth.onAuthStateChange((_e,x)=>setSession(x)); return()=>s.subscription.unsubscribe()},[]);
+ if(!supabaseConfigured) return <div className="auth-shell"><div className="auth-card"><span className="eyebrow">BANCO DE DADOS</span><h1>Ative o salvamento em nuvem</h1><p>Esta versão já está preparada para Supabase. Crie o projeto, rode o arquivo <b>supabase/schema.sql</b> e preencha o <b>.env</b>. Seus dados continuarão com cache local, mas a nuvem evita depender deste navegador.</p><pre>VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co{`\n`}VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANON</pre><p className="muted">Depois reinicie <b>npm run dev</b>.</p></div></div>;
+ if(session===undefined) return <div className="auth-shell"><div className="auth-card"><h2>Carregando sua conta…</h2></div></div>;
+ if(session) return children;
+ const submit=async e=>{e.preventDefault();setMsg(''); const r=modo==='entrar'?await supabase.auth.signInWithPassword({email,password:senha}):await supabase.auth.signUp({email,password:senha}); if(r.error)setMsg(r.error.message);else if(modo==='criar')setMsg('Conta criada. Se a confirmação de e-mail estiver ativa, confirme o e-mail antes de entrar.')};
+ return <div className="auth-shell"><form className="auth-card" onSubmit={submit}><div className="brand-mark">C$</div><span className="eyebrow">CARTEIRA INVEST</span><h1>{modo==='entrar'?'Entre na sua conta':'Crie sua conta'}</h1><p>Suas finanças, carteira e histórico ficam vinculados à sua conta.</p><label>E-mail<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Senha<input type="password" minLength="6" required value={senha} onChange={e=>setSenha(e.target.value)}/></label>{msg&&<div className="auth-msg">{msg}</div>}<button className="btn btn-primario" type="submit">{modo==='entrar'?'Entrar':'Criar conta'}</button><button className="auth-switch" type="button" onClick={()=>setModo(modo==='entrar'?'criar':'entrar')}>{modo==='entrar'?'Ainda não tenho conta':'Já tenho uma conta'}</button></form></div>
+}
